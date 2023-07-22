@@ -6,7 +6,6 @@ BASE_URL = "https://arch.b4k.co/vg/search/subject/%2Faids%2F/type/op/"
 
 def main():
     search_loop()
-    sleep(5)
 
 def search_loop():
     print(f"Starting search... ({BASE_URL})")
@@ -29,7 +28,7 @@ def search_loop():
         time.sleep(0.5)
     
     print(all_links)
-    with open("output.txt", "wb") as outfile:
+    with open("output.txt", "w") as outfile:
         outfile.writelines("%s\n" % l for l in all_links)
 
 def get_thread_links(soup):

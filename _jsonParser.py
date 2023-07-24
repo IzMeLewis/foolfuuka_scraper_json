@@ -99,7 +99,7 @@ def main():
         if textOnly:
             dPostsText = []
             for post in dPosts:
-                dPostsText.append(post.content)
+                dPostsText.append(dict(content = post.content))
             json.dump(dPostsText, jfile, indent=4)
         else:
             json.dump(dPosts, jfile, cls=PostEncoder, indent=4)

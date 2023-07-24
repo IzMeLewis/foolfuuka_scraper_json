@@ -2,8 +2,10 @@ import json
 import glob
 from bs4 import BeautifulSoup
 
-json_file = "test.json"
+json_filename = "test"
 textOnly = True
+textOnlyKey = "Text"
+jsonl = False
 
 class Post:
     def __init__(self, id, name,  time, content, replies, link, image, tripcode, type, board, title, isop=False):
@@ -26,6 +28,16 @@ class PostEncoder(json.JSONEncoder):
             return {"id": obj.id, "link": obj.link, "title": obj.title, "name": obj.name,"tripcode": obj.tripcode,  "time": obj.time, "type": obj.type, "replies": obj.replies, "image": obj.image, "content": obj.content, "board": obj.board, "isop": obj.isop}
         return super().default(obj)
     
+def dump_json(data, file_path):
+    with open(file_path, 'w') as json_file:
+        json.dump(data, json_file, cls=PostEncoder, indent=4)
+
+def dump_jsonl(data, file_path):
+    with open(file_path, 'w') as jsonl_file:
+        for item in data:
+            json.dump(item, jsonl_file, cls=PostEncoder)
+            jsonl_file.write('\n')
+
 dictTypes = {"icon-trash": "deleted", "icon-eye-close": "spoiler"}
 
 dPosts = []
@@ -91,17 +103,22 @@ def parse_post(htmlpost, isop, pBoard):
 
 
 def main():
+    global dPosts
+    global textOnlyKey
     html_files = glob.glob(r"./*.html")
     for file in html_files:
         parse_html(file)
         print("finished file " + file)
-    with open(json_file, "w") as jfile:
-        if textOnly:
-            dPostsText = []
-            for post in dPosts:
-                dPostsText.append(dict(content = post.content))
-            json.dump(dPostsText, jfile, indent=4)
-        else:
-            json.dump(dPosts, jfile, cls=PostEncoder, indent=4)
+    if textOnly:
+        dPostsText = []
+        for post in dPosts:
+            post_dict = {textOnlyKey : post.content}
+            dPostsText.append(post_dict)
+        dPosts = dPostsText
+    if jsonl:
+        dump_jsonl(dPosts, f"{json_filename}.jsonl")
+    else:
+        dump_json(dPosts, f"{json_filename}.json")
+                
 
 main()

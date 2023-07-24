@@ -112,8 +112,9 @@ def main():
     if textOnly:
         dPostsText = []
         for post in dPosts:
-            post_dict = {textOnlyKey : post.content}
-            dPostsText.append(post_dict)
+            if post.content != "":
+                post_dict = {textOnlyKey : post.content}
+                dPostsText.append(post_dict)
         dPosts = dPostsText
     if jsonl:
         dump_jsonl(dPosts, f"{json_filename}.jsonl")

@@ -65,7 +65,7 @@ def parse_post(htmlpost, isop, pBoard):
     if pTripcode == "":
         pTripcode = None
     pTime = htmlpost.find("time")["datetime"]
-    pContent = htmlpost.find("div", class_="text").get_text(" ", strip=True)
+    pContent = htmlpost.find("div", class_="text").get_text()
     
     pLink = htmlpost.find("a", title="Reply to this post")["href"]
     pImage = dict()

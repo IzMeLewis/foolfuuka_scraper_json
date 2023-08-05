@@ -2,6 +2,7 @@ import json
 import glob
 from bs4 import BeautifulSoup
 import threading
+import multiprocessing
 
 json_filename = "test"
 jsonl = False
@@ -39,22 +40,21 @@ def dump_jsonl(data, file_path):
 
 dictTypes = {"icon-trash": "deleted", "icon-eye-close": "spoiler"}
 
-dPosts = []
 
-def parse_html(filename):
+def parse_html(filename, shared_posts, lock):
     global dPosts
     with open(filename, "r", encoding="utf-8") as file:
         html_content = file.read()
     soup = BeautifulSoup(html_content, "html.parser")
     board = soup.find("article", class_="thread")["data-board"]
     op = parse_post(soup, True, board)
-    with threading.Lock():
-        dPosts.append(op)
+    with lock:
+        shared_posts.append(op)
     htmlposts = soup.find_all("article", class_="post")
     for post in htmlposts:
         post = parse_post(post, False, board)
-        with threading.Lock():
-            dPosts.append(post)
+        with lock:
+            shared_posts.append(post)
     print("finished file " + filename)
 
 def get_text(tag):
@@ -118,23 +118,28 @@ def parse_post(htmlpost, isop, pBoard):
     return post
     
 def main():
-    global dPosts
+    manager = multiprocessing.Manager()
+    dPosts = manager.list()
+    lock = manager.Lock()
     global textOnlyKey
     html_files = glob.glob(r"./*.html")
-    threads = []
+    processes = []
 
     for file in html_files:
-        thread = threading.Thread(target=parse_html, args=(file,))
-        threads.append(thread)
-        thread.start()
+        process = multiprocessing.Process(target=parse_html, args=(file,dPosts, lock))
+        processes.append(process)
+        process.start()
 
-    for thread in threads:
-        thread.join()
-    
+    for process in processes:
+        process.join()
+        
+    #convert listproxy to regular python list
+    dPosts = list(dPosts)
+
     if jsonl:
         dump_jsonl(dPosts, f"{json_filename}.jsonl")
     else:
         dump_json(dPosts, f"{json_filename}.json")
                 
-
-main()
+if __name__ == "__main__":
+    main()

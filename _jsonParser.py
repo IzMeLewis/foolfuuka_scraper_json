@@ -1,10 +1,9 @@
 import json
 import glob
 from bs4 import BeautifulSoup
+import threading
 
 json_filename = "test"
-textOnly = True
-textOnlyKey = "Text"
 jsonl = False
 
 class Post:
@@ -43,21 +42,38 @@ dictTypes = {"icon-trash": "deleted", "icon-eye-close": "spoiler"}
 dPosts = []
 
 def parse_html(filename):
+    global dPosts
     with open(filename, "r", encoding="utf-8") as file:
         html_content = file.read()
     soup = BeautifulSoup(html_content, "html.parser")
     board = soup.find("article", class_="thread")["data-board"]
-
     op = parse_post(soup, True, board)
-    dPosts.append(op)
-
+    with threading.Lock():
+        dPosts.append(op)
     htmlposts = soup.find_all("article", class_="post")
     for post in htmlposts:
         post = parse_post(post, False, board)
-        dPosts.append(post)
+        with threading.Lock():
+            dPosts.append(post)
+    print("finished file " + filename)
+
+def get_text(tag):
+    text = ''
+    for content in tag.contents:
+        if isinstance(content, str):
+            text += content
+        elif content.name == 'br':
+            text += '\n'
+        elif content.name == 'a':
+            text += content.get('href')
+        elif content.name == 'span':
+            text += content.get_text()
+    return text.strip()
+
 
 def parse_post(htmlpost, isop, pBoard):
     #this is absolutely disgusting but it works
+    pContent = get_text(htmlpost.find("div", class_="text"))
     post = None
     pId = htmlpost.find("a", title="Reply to this post")["data-post"]
     pName = htmlpost.find("span", class_="post_author").get_text(strip=True)
@@ -65,7 +81,6 @@ def parse_post(htmlpost, isop, pBoard):
     if pTripcode == "":
         pTripcode = None
     pTime = htmlpost.find("time")["datetime"]
-    pContent = htmlpost.find("div", class_="text").get_text()
     
     pLink = htmlpost.find("a", title="Reply to this post")["href"]
     pImage = dict()
@@ -99,23 +114,23 @@ def parse_post(htmlpost, isop, pBoard):
         post = Post(pId, pName, pTime, pContent, Preplies, pLink, pImage, pTripcode, pType, pBoard, pTitle, True)
     else:
         post = Post(pId, pName, pTime, pContent, Preplies, pLink, pImage, pTripcode, pType, pBoard, None, False)
+
     return post
-
-
+    
 def main():
     global dPosts
     global textOnlyKey
     html_files = glob.glob(r"./*.html")
+    threads = []
+
     for file in html_files:
-        parse_html(file)
-        print("finished file " + file)
-    if textOnly:
-        dPostsText = []
-        for post in dPosts:
-            if post.content != "":
-                post_dict = {textOnlyKey : post.content}
-                dPostsText.append(post_dict)
-        dPosts = dPostsText
+        thread = threading.Thread(target=parse_html, args=(file,))
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+    
     if jsonl:
         dump_jsonl(dPosts, f"{json_filename}.jsonl")
     else:

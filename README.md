@@ -28,5 +28,3 @@ This consists of three scripts that can be used to generate NovelAI training dat
 I've only tested it with arch.b4k.co but it will probably work with most FoolFuuka-based 4chan archive sites with no or minimal changes.
 
 ## JsonParser
-Contains a bool for textOnly.
-Made for certain Usecases.
